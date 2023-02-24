@@ -34,7 +34,7 @@ create table squares (
   x int not null,
   y int not null,
   disc int not null,
-  foreign key (turn_id) references turns (id)
+  foreign key (turn_id) references turns (id),
   unique (turn_id, x, y)
 );
 
@@ -45,3 +45,5 @@ create table game_results(
   end_at datetime not null,
   foreign key (game_id) references games (id)
 );
+
+select 'ok' as result;
