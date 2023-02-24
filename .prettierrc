@@ -1,7 +1,7 @@
 printWidth: 80
 tabWidth: 2
 singleQuote: false
-trailingComma: "none"
+trailingComma: "es5"
 semi: false
 parser: "typescript"
 singleAttributePerLine: true
