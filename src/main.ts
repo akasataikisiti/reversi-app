@@ -11,12 +11,19 @@ app.use(express.static("static", { extensions: ["html"] }))
 
 app.get("/api/hello", async (req, res) => {
   res.json({
-    message: "Hello nodemon"
+    message: "Hello nodemon",
   })
 })
 
 app.get("/api/error", async (req, res) => {
   throw new Error("Error endpoint")
+})
+
+app.post("/api/games", async (req, res) => {
+  const startedAt = new Date()
+  console.log(`startedAt = ${startedAt}`)
+
+  res.status(201).end()
 })
 
 app.use(errorHandler)
@@ -33,6 +40,6 @@ function errorHandler(
 ) {
   console.log("Unexpected error occurrd", err)
   res.status(500).send({
-    message: "Unexpected error occurred"
+    message: "Unexpected error occurred",
   })
 }
