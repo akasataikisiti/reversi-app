@@ -98,6 +98,13 @@ app.get('/api/games/latest/turns/:turnCount', async (req, res) => {
     const gameSelectResult = await conn.execute<mysql.RowDataPacket[]>(
       'select id, started_at from games order by id desc limit 1'
     )
+    const game = gameSelectResult[0][0]
+
+    const turnSelectResult = await conn.execute<mysql.RowDataPacket[]>(
+      'select id, game_id, turn_count, next_disc, end_at from turns where game_id = ? and turn_count = ?',
+      [game['id'], turnCount]
+    )
+    const turn = turnSelectResult[0][0]
   } finally {
     await conn.end()
   }
