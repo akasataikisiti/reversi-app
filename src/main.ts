@@ -38,12 +38,7 @@ app.get('/api/error', async (req, res) => {
 app.post('/api/games', async (req, res) => {
   const now = new Date()
 
-  const conn = await mysql.createConnection({
-    host: 'localhost',
-    database: 'reversi',
-    user: 'reversi',
-    password: 'password',
-  })
+  const conn = await connectMySQL()
 
   try {
     await conn.beginTransaction()
@@ -110,5 +105,14 @@ function errorHandler(
   console.log('Unexpected error occurrd', err)
   res.status(500).send({
     message: 'Unexpected error occurred',
+  })
+}
+
+async function connectMySQL() {
+  return await mysql.createConnection({
+    host: 'localhost',
+    database: 'reversi',
+    user: 'reversi',
+    password: 'password',
   })
 }
