@@ -115,6 +115,15 @@ app.get('/api/games/latest/turns/:turnCount', async (req, res) => {
     squares.forEach((s) => {
       board[s.y][s.x] = s.disc
     })
+
+    const responseBody = {
+      turnCount,
+      board,
+      nextDisc: turn['next_disc'],
+      // TODO 決着がついている場合、game_resultsテーブルから取得する
+      winnerDisc: null,
+    }
+    res.json(responseBody)
   } finally {
     await conn.end()
   }
