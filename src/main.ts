@@ -170,6 +170,46 @@ app.post('/api/games/latest/turns', async (req, res) => {
     // ひっくり返す
 
     // ターンを保存する
+    const nextDisc = disc === DARK ? LIGHT : DARK
+    const now = new Date()
+    const turnInsertResult = await conn.execute<mysql.ResultSetHeader>(
+      'insert into turns (game_id, turn_count, next_disc, end_at) value (?, ?, ?, ?)',
+      [game['id'], turnCount, nextDisc, now]
+    )
+    const turnId = turnInsertResult[0].insertId
+
+    // === squaresテーブルへのデータインサート文作成と実行(開始) ===
+
+    // マス目の数を計算で出力
+    const squareCount = board
+      .map((line) => line.length)
+      .reduce((v1, v2) => v1 + v2, 0)
+
+    const squareInsertSql =
+      'insert into squares (turn_id, x, y, disc) values ' +
+      Array.from(Array(squareCount))
+        .map(() => '(?, ?, ?, ?)')
+        .join(', ')
+
+    const squaresInsertValues: any[] = []
+    board.forEach((line, y) => {
+      line.forEach((disc, x) => {
+        squaresInsertValues.push(turnId)
+        squaresInsertValues.push(x)
+        squaresInsertValues.push(y)
+        squaresInsertValues.push(disc)
+      })
+    })
+    // === squaresテーブルへのデータインサート文作成と実行(終了) ===
+
+    await conn.execute(squareInsertSql, squaresInsertValues)
+
+    await conn.execute(
+      'insert into moves (turn_id, disc, x, y) values (?, ?, ?, ?)',
+      [turnId, disc, x, y]
+    )
+
+    await conn.commit()
   } finally {
     await conn.end()
   }
