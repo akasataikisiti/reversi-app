@@ -13,7 +13,7 @@ const INITIAL_BOARD = [
   [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
 ]
 
-const boardElement = document.getElementById("board")
+const boardElement = document.getElementById('board')
 
 async function showBoard() {
   while (boardElement.firstChild) {
@@ -22,13 +22,13 @@ async function showBoard() {
   INITIAL_BOARD.forEach((line) => {
     line.forEach((square) => {
       // <div class="square">
-      const squareElement = document.createElement("div")
-      squareElement.className = "square"
+      const squareElement = document.createElement('div')
+      squareElement.className = 'square'
 
       if (square !== EMPTY) {
         // <div class="stone dark">
-        const stoneElement = document.createElement("div")
-        const color = square === DARK ? "dark" : "light"
+        const stoneElement = document.createElement('div')
+        const color = square === DARK ? 'dark' : 'light'
         stoneElement.className = `stone ${color}`
 
         squareElement.appendChild(stoneElement)
@@ -39,8 +39,8 @@ async function showBoard() {
 }
 
 async function registerGame() {
-  await fetch("/api/games", {
-    method: "POST",
+  await fetch('/api/games', {
+    method: 'POST',
   })
 }
 

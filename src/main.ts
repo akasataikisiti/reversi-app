@@ -3,6 +3,21 @@ import morgan from 'morgan'
 import 'express-async-errors'
 import mysql from 'mysql2/promise'
 
+const EMPTY = 0
+const DARK = 1
+const LIGHT = 2
+
+const INITIAL_BOARD = [
+  [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+  [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+  [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+  [EMPTY, EMPTY, EMPTY, DARK, LIGHT, EMPTY, EMPTY, EMPTY],
+  [EMPTY, EMPTY, EMPTY, LIGHT, DARK, EMPTY, EMPTY, EMPTY],
+  [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+  [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+  [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+]
+
 const PORT = 3000
 
 const app = express()
@@ -21,7 +36,7 @@ app.get('/api/error', async (req, res) => {
 })
 
 app.post('/api/games', async (req, res) => {
-  const startedAt = new Date()
+  const now = new Date()
 
   const conn = await mysql.createConnection({
     host: 'localhost',
@@ -33,7 +48,44 @@ app.post('/api/games', async (req, res) => {
   try {
     await conn.beginTransaction()
 
-    await conn.execute('insert into games (started_at) values (?)', [startedAt])
+    const gameInsertResult = await conn.execute<mysql.ResultSetHeader>(
+      'insert into games (started_at) values (?)',
+      [now]
+    )
+    const gameId = gameInsertResult[0].insertId
+
+    const turnInsertResult = await conn.execute<mysql.ResultSetHeader>(
+      'insert into turns (game_id, turn_count, next_disc, end_at) value (?, ?, ?, ?)',
+      [gameId, 0, DARK, now]
+    )
+    const turnId = turnInsertResult[0].insertId
+
+    // === squaresテーブルへのデータインサート文作成と実行(開始) ===
+
+    // マス目の数を計算で出力
+    const squareCount = INITIAL_BOARD.map((line) => line.length).reduce(
+      (v1, v2) => v1 + v2,
+      0
+    )
+
+    const squareInsertSql =
+      'insert into squares (turn_id, x, y, disc) values ' +
+      Array.from(Array(squareCount))
+        .map(() => '(?, ?, ?, ?)')
+        .join(', ')
+
+    const squaresInsertValues: any[] = []
+    INITIAL_BOARD.forEach((line, y) => {
+      line.forEach((disc, x) => {
+        squaresInsertValues.push(turnId)
+        squaresInsertValues.push(x)
+        squaresInsertValues.push(y)
+        squaresInsertValues.push(disc)
+      })
+    })
+    // === squaresテーブルへのデータインサート文作成と実行(終了) ===
+
+    await conn.execute(squareInsertSql, squaresInsertValues)
 
     await conn.commit()
   } finally {

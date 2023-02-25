@@ -13,7 +13,7 @@ create table turns (
   id int primary key auto_increment,
   game_id int not null,
   turn_count int not null,
-  next_dist int,
+  next_disc int,
   end_at datetime not null,
   foreign key (game_id) references games (id),
   unique (game_id, turn_count)
