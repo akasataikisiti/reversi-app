@@ -90,6 +90,19 @@ app.post('/api/games', async (req, res) => {
   res.status(201).end()
 })
 
+app.get('/api/games/latest/turns/:turnCount', async (req, res) => {
+  const turnCount = parseInt(req.params.turnCount)
+
+  const conn = await connectMySQL()
+  try {
+    const gameSelectResult = await conn.execute<mysql.RowDataPacket[]>(
+      'select id, started_at from games order by id desc limit 1'
+    )
+  } finally {
+    await conn.end()
+  }
+})
+
 app.use(errorHandler)
 
 app.listen(PORT, () => {
