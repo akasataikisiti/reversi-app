@@ -105,6 +105,16 @@ app.get('/api/games/latest/turns/:turnCount', async (req, res) => {
       [game['id'], turnCount]
     )
     const turn = turnSelectResult[0][0]
+
+    const squareSelectResult = await conn.execute<mysql.RowDataPacket[]>(
+      'select id, turn_id, x, y, disc from squares where turn_id = ?',
+      [turn['id']]
+    )
+    const squares = squareSelectResult[0]
+    const board = Array.from(Array(8)).map(() => Array.from(Array(8)))
+    squares.forEach((s) => {
+      board[s.y][s.x] = s.disc
+    })
   } finally {
     await conn.end()
   }
