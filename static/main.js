@@ -16,6 +16,11 @@ const INITIAL_BOARD = [
 const boardElement = document.getElementById('board')
 
 async function showBoard() {
+  const turnCount = 0
+  const response = await fetch(`/api/games/latest/turns/${turnCount}`)
+  const responseBody = await response.json()
+  console.log(responseBody)
+
   while (boardElement.firstChild) {
     boardElement.removeChild(boardElement.firstChild)
   }
