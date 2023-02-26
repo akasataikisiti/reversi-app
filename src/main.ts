@@ -21,16 +21,6 @@ const turnGateway = new TurnGateway()
 const moveGateway = new MoveGateway()
 const squareGateway = new SquareGateway()
 
-app.get('/api/hello', async (req, res) => {
-  res.json({
-    message: 'Hello nodemon',
-  })
-})
-
-app.get('/api/error', async (req, res) => {
-  throw new Error('Error endpoint')
-})
-
 app.use(gameRouter)
 app.use(turnRouter)
 
