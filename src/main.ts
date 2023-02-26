@@ -6,6 +6,7 @@ import { GameGateway } from './dataaccess/gameGateway'
 import { TurnGateway } from './dataaccess/turnGateway'
 import { MoveGateway } from './dataaccess/moveGateway'
 import { SquareGateway } from './dataaccess/squareGateway'
+import { gameRouter } from './presentation/gameRouter'
 
 const EMPTY = 0
 const DARK = 1
@@ -45,33 +46,7 @@ app.get('/api/error', async (req, res) => {
   throw new Error('Error endpoint')
 })
 
-app.post('/api/games', async (req, res) => {
-  const now = new Date()
-
-  const conn = await connectMySQL()
-
-  try {
-    await conn.beginTransaction()
-
-    const gameRecord = await gameGateway.insert(conn, now)
-
-    const turnRecord = await turnGateway.insert(
-      conn,
-      gameRecord.id,
-      0,
-      DARK,
-      now
-    )
-
-    await squareGateway.insertAll(conn, turnRecord.id, INITIAL_BOARD)
-
-    await conn.commit()
-  } finally {
-    await conn.end()
-  }
-
-  res.status(201).end()
-})
+app.use(gameRouter)
 
 app.get('/api/games/latest/turns/:turnCount', async (req, res) => {
   const turnCount = parseInt(req.params.turnCount)
