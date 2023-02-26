@@ -5,20 +5,49 @@ export const turnRouter = express.Router()
 
 const turnService = new TurnService()
 
-turnRouter.get('/api/games/latest/turns/:turnCount', async (req, res) => {
-  const turnCount = parseInt(req.params.turnCount)
+interface TurnGetResponseBody {
+  turnCount: number
+  board: number[][]
+  nextDisc: number | null
+  winnerDisc: number | null
+}
 
-  const output = await turnService.findLatestGameTurnByTurnCount(turnCount)
+turnRouter.get(
+  '/api/games/latest/turns/:turnCount',
+  async (req, res: express.Response<TurnGetResponseBody>) => {
+    const turnCount = parseInt(req.params.turnCount)
 
-  res.json(output)
-})
+    const output = await turnService.findLatestGameTurnByTurnCount(turnCount)
 
-turnRouter.post('/api/games/latest/turns', async (req, res) => {
-  const turnCount = parseInt(req.body.turnCount)
-  const disc = parseInt(req.body.move.disc)
-  const x = parseInt(req.body.move.x)
-  const y = parseInt(req.body.move.y)
+    const responseBody = {
+      turnCount: output.turnCount,
+      board: output.board,
+      nextDisc: output.nextDisc ?? null,
+      winnerDisc: output.winnerDisc ?? null,
+    }
 
-  await turnService.registerTurn(turnCount, disc, x, y)
-  res.status(201).end()
-})
+    res.json(responseBody)
+  }
+)
+
+interface TurnPostRequestBody {
+  turnCount: number
+  move: {
+    disc: number
+    x: number
+    y: number
+  }
+}
+
+turnRouter.post(
+  '/api/games/latest/turns',
+  async (req: express.Request<TurnGetResponseBody>, res) => {
+    const turnCount = req.body.turnCount
+    const disc = req.body.move.disc
+    const x = req.body.move.x
+    const y = req.body.move.y
+
+    await turnService.registerTurn(turnCount, disc, x, y)
+    res.status(201).end()
+  }
+)
