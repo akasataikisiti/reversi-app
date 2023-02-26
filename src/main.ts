@@ -4,6 +4,7 @@ import 'express-async-errors'
 import mysql from 'mysql2/promise'
 import { GameGateway } from './dataaccess/gameGateway'
 import { TurnGateway } from './dataaccess/turnGateway'
+import { MoveGateway } from './dataaccess/moveGateway'
 
 const EMPTY = 0
 const DARK = 1
@@ -30,6 +31,7 @@ app.use(express.json())
 
 const gameGateway = new GameGateway()
 const turnGateway = new TurnGateway()
+const moveGateway = new MoveGateway()
 
 app.get('/api/hello', async (req, res) => {
   res.json({
@@ -145,9 +147,7 @@ app.post('/api/games/latest/turns', async (req, res) => {
   const conn = await connectMySQL()
   try {
     const gameRecord = await gameGateway.findLatest(conn)
-    if (!gameRecord) {
-      throw new Error('Latest game not found')
-    }
+    if (!gameRecord) throw new Error('Latest game not found')
 
     const previousTurnCount = turnCount - 1
 
@@ -214,10 +214,7 @@ app.post('/api/games/latest/turns', async (req, res) => {
 
     await conn.execute(squareInsertSql, squaresInsertValues)
 
-    await conn.execute(
-      'insert into moves (turn_id, disc, x, y) values (?, ?, ?, ?)',
-      [turnId, disc, x, y]
-    )
+    await moveGateway.insert(conn, turnRecord.id, disc, x, y)
 
     await conn.commit()
   } finally {
