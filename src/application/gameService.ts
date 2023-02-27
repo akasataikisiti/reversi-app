@@ -1,5 +1,5 @@
 import express from 'express'
-import { connectMySQL } from '../dataaccess/connection'
+import { connectMySQL } from '../infrastructure/connection'
 import { Game } from '../domain/game/game'
 import { GameRepository } from '../domain/game/gameRepository'
 import { firstTurn } from '../domain/turn/turn'
