@@ -36,23 +36,44 @@ export class Board {
     const walledX = move.point.x + 1
     const walledY = move.point.y + 1
 
-    // 上
-    const flipCandidate: Point[] = []
+    const checkFlipPoints = (xMove: number, yMove: number) => {
+      const flipCandidate: Point[] = []
 
-    // 一つ動いた位置から開始
-    const cursorX = walledX
-    let cursorY = walledY - 1
+      // 一つ動いた位置から開始
+      let cursorX = walledX + xMove
+      let cursorY = walledY + yMove
 
-    while (isOppositeDisc(move.disc, this._walledDiscs[cursorY][cursorX])) {
-      // 番兵を考慮して-1する
-      flipCandidate.push(new Point(cursorX - 1, cursorY - 1))
-      cursorY--
-      // 次の手が同じ色の石なら、ひっくり返す石が確定
-      if (move.disc === this._walledDiscs[cursorY][cursorX]) {
-        flipPoints.push(...flipCandidate)
-        break
+      while (isOppositeDisc(move.disc, this._walledDiscs[cursorY][cursorX])) {
+        // 番兵を考慮して-1する
+        flipCandidate.push(new Point(cursorX - 1, cursorY - 1))
+        cursorX += xMove
+        cursorY += yMove
+        console.table(this._walledDiscs)
+        // 次の手が同じ色の石なら、ひっくり返す石が確定
+        if (move.disc === this._walledDiscs[cursorY][cursorX]) {
+          flipPoints.push(...flipCandidate)
+          break
+        }
       }
     }
+
+    // 上
+    checkFlipPoints(0, -1)
+    // 左上
+    checkFlipPoints(-1, -1)
+    // 左
+    checkFlipPoints(-1, 0)
+    // 左下
+    checkFlipPoints(-1, 1)
+    // 下
+    checkFlipPoints(0, 1)
+    // 右下
+    checkFlipPoints(1, 1)
+    // 右
+    checkFlipPoints(1, 0)
+    // 右上
+    checkFlipPoints(1, -1)
+
     return flipPoints
   }
 
