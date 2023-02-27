@@ -1,8 +1,8 @@
 import express from 'express'
 import { connectMySQL } from '../dataaccess/connection'
 import { GameGateway } from '../dataaccess/gameGateway'
-import { firstTurn } from '../domain/turn'
-import { TurnRepository } from '../domain/turnRepository'
+import { firstTurn } from '../domain/turn/turn'
+import { TurnRepository } from '../domain/turn/turnRepository'
 
 const gameGateway = new GameGateway()
 
