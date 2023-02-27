@@ -51,4 +51,25 @@ export class TurnRepository {
       turnRecord.endAt
     )
   }
+
+  async save(conn: mysql.Connection, turn: Turn) {
+    const turnRecord = await turnGateway.insert(
+      conn,
+      turn.gameId,
+      turn.turnCount,
+      turn.nextDisc,
+      turn.endAt
+    )
+    await squareGateway.insertAll(conn, turnRecord.id, turn.board.discs)
+
+    if (turn.move) {
+      await moveGateway.insert(
+        conn,
+        turnRecord.id,
+        turn.move.disc,
+        turn.move.point.x,
+        turn.move.point.y
+      )
+    }
+  }
 }

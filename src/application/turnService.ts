@@ -1,19 +1,10 @@
 import { connectMySQL } from '../dataaccess/connection'
-import { DARK, LIGHT } from '../application/constants'
 import { GameGateway } from '../dataaccess/gameGateway'
-import { SquareGateway } from '../dataaccess/squareGateway'
-import { TurnGateway } from '../dataaccess/turnGateway'
-import { MoveGateway } from '../dataaccess/moveGateway'
-import { Board } from '../domain/board'
 import { toDisc } from '../domain/disc'
-import { Turn } from '../domain/turn'
 import { Point } from '../domain/point'
 import { TurnRepository } from '../domain/turnRepository'
 
 const gameGateway = new GameGateway()
-const turnGateway = new TurnGateway()
-const squareGateway = new SquareGateway()
-const moveGateway = new MoveGateway()
 
 const turnRepository = new TurnRepository()
 
@@ -87,17 +78,7 @@ export class TurnService {
       const newTurn = previousTurn.placeNext(toDisc(disc), new Point(x, y))
 
       // ターンを保存する
-      const turnRecord = await turnGateway.insert(
-        conn,
-        newTurn.gameId,
-        newTurn.turnCount,
-        newTurn.nextDisc,
-        newTurn.endAt
-      )
-
-      await squareGateway.insertAll(conn, turnRecord.id, newTurn.board.discs)
-
-      await moveGateway.insert(conn, turnRecord.id, disc, x, y)
+      await turnRepository.save(conn, newTurn)
 
       await conn.commit()
     } finally {

@@ -45,6 +45,9 @@ export class Turn {
   public get nextDisc() {
     return this._nextDisc
   }
+  public get move() {
+    return this._move
+  }
   public get endAt() {
     return this._endAt
   }
