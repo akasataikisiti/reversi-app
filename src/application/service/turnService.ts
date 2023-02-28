@@ -92,6 +92,13 @@ export class TurnService {
       // ターンを保存する
       await turnRepository.save(conn, newTurn)
 
+      // 勝敗が決した場合、対戦結果を保存
+      if (newTurn.gameEnded()) {
+        const winnerDisc = newTurn.winnerDisc
+
+        // TODO 対戦結果を保存
+      }
+
       await conn.commit()
     } finally {
       await conn.end()
