@@ -1,5 +1,6 @@
 import express from 'express'
 import { TurnService } from '../application/service/turnService'
+import { toDisc } from '../domain/model/turn/disc'
 import { Point } from '../domain/model/turn/point'
 
 export const turnRouter = express.Router()
@@ -44,7 +45,7 @@ turnRouter.post(
   '/api/games/latest/turns',
   async (req: express.Request<TurnGetResponseBody>, res) => {
     const turnCount = req.body.turnCount
-    const disc = req.body.move.disc
+    const disc = toDisc(req.body.move.disc)
     const point = new Point(req.body.move.x, req.body.move.y)
     const x = req.body.move.x
     const y = req.body.move.y
