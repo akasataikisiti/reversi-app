@@ -1,5 +1,5 @@
 import express from 'express'
-import { TurnService } from '../application/turnService'
+import { TurnService } from '../application/service/turnService'
 
 export const turnRouter = express.Router()
 
@@ -30,14 +30,14 @@ turnRouter.get(
   }
 )
 
-interface TurnPostRequestBody {
-  turnCount: number
-  move: {
-    disc: number
-    x: number
-    y: number
-  }
-}
+// interface TurnPostRequestBody {
+//   turnCount: number
+//   move: {
+//     disc: number
+//     x: number
+//     y: number
+//   }
+// }
 
 turnRouter.post(
   '/api/games/latest/turns',
