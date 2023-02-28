@@ -1,5 +1,6 @@
 import express from 'express'
 import { TurnService } from '../application/service/turnService'
+import { Point } from '../domain/model/turn/point'
 
 export const turnRouter = express.Router()
 
@@ -44,10 +45,11 @@ turnRouter.post(
   async (req: express.Request<TurnGetResponseBody>, res) => {
     const turnCount = req.body.turnCount
     const disc = req.body.move.disc
+    const point = new Point(req.body.move.x, req.body.move.y)
     const x = req.body.move.x
     const y = req.body.move.y
 
-    await turnService.registerTurn(turnCount, disc, x, y)
+    await turnService.registerTurn(turnCount, disc, point)
     res.status(201).end()
   }
 )
