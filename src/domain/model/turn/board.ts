@@ -86,6 +86,10 @@ export class Board {
     return flipPoints
   }
 
+  existValidMove(disc: Disc): boolean {
+    return true
+  }
+
   private walledDiscs(): Disc[][] {
     const walled: Disc[][] = []
 
