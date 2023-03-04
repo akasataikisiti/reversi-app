@@ -10,7 +10,7 @@ async function showGames() {
   }
 
   games.forEach((game) => {
-    const trElement = document.createEvent('tr')
+    const trElement = document.createElement('tr')
 
     const appendTdElement = (innerText) => {
       const tdElement = document.createElement('td')
