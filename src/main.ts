@@ -6,7 +6,7 @@ import { turnRouter } from './presentation/turnRouter'
 import { DomainError } from './domain/error/domainError'
 import { ApplicationError } from './application/error/applicationError'
 
-const PORT = 3000
+const PORT = process.env.PORT || 3000
 
 const app = express()
 
