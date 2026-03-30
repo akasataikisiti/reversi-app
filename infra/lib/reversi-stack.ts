@@ -4,6 +4,7 @@ import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import { Construct } from 'constructs';
 
 export class ReversiStack extends cdk.Stack {
@@ -159,6 +160,43 @@ export class ReversiStack extends cdk.Stack {
       desiredCount: 1,
     });
 
+    // ----------------------------------------
+    // ALB（Application Load Balancer）
+    // ----------------------------------------
+    // インターネットからのリクエストを受け取り ECS コンテナに転送する
+    const alb = new elbv2.ApplicationLoadBalancer(this, 'ReversiAlb', {
+      vpc,
+      internetFacing: true,  // インターネットに公開する
+      securityGroup: albSg,
+      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
+    });
+
+    // リスナー：ALBがポート80でリクエストを受け付ける
+    const listener = alb.addListener('HttpListener', {
+      port: 80,
+      open: true,
+    });
+
+    // ターゲットグループ：ALBのリクエストを転送する先（ECSサービス）を登録
+    // ヘルスチェック：/health に GET して 200 が返れば正常と判断
+    listener.addTargets('ReversiTarget', {
+      port: 3000,
+      protocol: elbv2.ApplicationProtocol.HTTP,
+      targets: [service],
+      healthCheck: {
+        path: '/health',
+        interval: cdk.Duration.seconds(30),
+        healthyHttpCodes: '200',
+      },
+    });
+
+    // ALBのURLをCloudFormationのOutputsとして出力する
+    // cdk deploy 後にターミナルに表示され、アプリのURLとして使える
+    new cdk.CfnOutput(this, 'AlbDnsName', {
+      value: alb.loadBalancerDnsName,
+      description: 'ALB DNS Name - Use this URL to access the app',
+    });
+
     this.vpc = vpc;
     this.albSg = albSg;
     this.ecsSg = ecsSg;
@@ -166,6 +204,7 @@ export class ReversiStack extends cdk.Stack {
     this.database = database;
     this.repository = repository;
     this.service = service;
+    this.alb = alb;
   }
 
   public readonly vpc: ec2.Vpc;
@@ -175,4 +214,5 @@ export class ReversiStack extends cdk.Stack {
   public readonly database: rds.DatabaseInstance;
   public readonly repository: ecr.Repository;
   public readonly service: ecs.FargateService;
+  public readonly alb: elbv2.ApplicationLoadBalancer;
 }
