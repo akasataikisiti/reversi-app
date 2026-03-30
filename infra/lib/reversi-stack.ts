@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib/core';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as rds from 'aws-cdk-lib/aws-rds';
 import { Construct } from 'constructs';
 
 export class ReversiStack extends cdk.Stack {
@@ -53,16 +54,42 @@ export class ReversiStack extends cdk.Stack {
     });
     rdsSg.addIngressRule(ecsSg, ec2.Port.tcp(3306), 'Allow MySQL from ECS');
 
-    // 次のコミットで使うためにプロパティとして保持
+    // ----------------------------------------
+    // RDS（MySQL）
+    // ----------------------------------------
+    // CDK が自動で Secrets Manager にパスワードを生成・保存する
+    // アプリ側では ECS タスク定義を通じて環境変数として受け取る
+    const database = new rds.DatabaseInstance(this, 'ReversiDb', {
+      engine: rds.DatabaseInstanceEngine.mysql({
+        version: rds.MysqlEngineVersion.VER_8_0,
+      }),
+      instanceType: ec2.InstanceType.of(
+        ec2.InstanceClass.T3,
+        ec2.InstanceSize.MICRO,
+      ),
+      vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      securityGroups: [rdsSg],
+      databaseName: 'reversi',
+      // スナップショットなしで削除できるようにする（学習・検証用途）
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      deletionProtection: false,
+      // マルチAZ配置はOFF（コスト削減のため）
+      multiAz: false,
+      // 自動バックアップは無効（学習用途）
+      backupRetention: cdk.Duration.days(0),
+    });
+
     this.vpc = vpc;
     this.albSg = albSg;
     this.ecsSg = ecsSg;
     this.rdsSg = rdsSg;
+    this.database = database;
   }
 
-  // 他のコンストラクトから参照できるよう公開
   public readonly vpc: ec2.Vpc;
   public readonly albSg: ec2.SecurityGroup;
   public readonly ecsSg: ec2.SecurityGroup;
   public readonly rdsSg: ec2.SecurityGroup;
+  public readonly database: rds.DatabaseInstance;
 }
