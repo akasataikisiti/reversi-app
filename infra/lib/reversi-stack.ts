@@ -158,6 +158,8 @@ export class ReversiStack extends cdk.Stack {
       securityGroups: [ecsSg],
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
       desiredCount: 1,
+      // ECS Exec を有効化：コンテナ内でコマンドを実行できる（DB初期化などに使用）
+      enableExecuteCommand: true,
     });
 
     // ----------------------------------------
