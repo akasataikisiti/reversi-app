@@ -8,13 +8,17 @@ import { DomainError } from './domain/error/domainError'
 import { ApplicationError } from './application/error/applicationError'
 
 const PORT = Number(process.env.PORT || 3000)
-const HOST = process.env.HOST || '127.0.0.1'
+const HOST = process.env.HOST || '0.0.0.0'
 
 const app = express()
 
 app.use(morgan('dev'))
 app.use(express.static('static', { extensions: ['html'] }))
 app.use(express.json())
+
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok' })
+})
 
 app.use(gameRouter)
 app.use(turnRouter)
