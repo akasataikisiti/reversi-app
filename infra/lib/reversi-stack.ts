@@ -1,6 +1,9 @@
 import * as cdk from 'aws-cdk-lib/core';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
+import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 
 export class ReversiStack extends cdk.Stack {
@@ -80,11 +83,89 @@ export class ReversiStack extends cdk.Stack {
       backupRetention: cdk.Duration.days(0),
     });
 
+    // ----------------------------------------
+    // ECR（Dockerイメージの保存場所）
+    // ----------------------------------------
+    // docker build & push したイメージをここに保存する
+    // ECS はここからイメージを取得して起動する
+    const repository = new ecr.Repository(this, 'ReversiRepository', {
+      repositoryName: 'reversi-app',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      // イメージが蓄積しないよう古いものを自動削除するライフサイクルルール
+      lifecycleRules: [
+        {
+          maxImageCount: 5,
+          description: 'Keep only 5 latest images',
+        },
+      ],
+    });
+
+    // ----------------------------------------
+    // ECS クラスター
+    // ----------------------------------------
+    // Fargate タスクを動かす「箱」。クラスター自体はリソースを消費しない
+    const cluster = new ecs.Cluster(this, 'ReversiCluster', { vpc });
+
+    // ----------------------------------------
+    // ECS タスク定義
+    // ----------------------------------------
+    // コンテナの設計図：何のイメージを、どのくらいのCPU/メモリで、
+    // どんな環境変数で動かすかを定義する
+
+    // タスク実行ロール：ECS がコンテナを起動するときに必要な権限
+    // （ECRからイメージを pull する、Secrets Manager からパスワードを取得するなど）
+    const taskExecutionRole = new iam.Role(this, 'TaskExecutionRole', {
+      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy'),
+      ],
+    });
+    // Secrets Manager からシークレットを読み取る権限を追加
+    database.secret?.grantRead(taskExecutionRole);
+
+    const taskDefinition = new ecs.FargateTaskDefinition(this, 'ReversiTaskDef', {
+      cpu: 256,       // 0.25 vCPU
+      memoryLimitMiB: 512,
+      executionRole: taskExecutionRole,
+    });
+
+    // タスク定義にコンテナを追加
+    taskDefinition.addContainer('ReversiContainer', {
+      image: ecs.ContainerImage.fromEcrRepository(repository, 'latest'),
+      portMappings: [{ containerPort: 3000 }],
+      // DB 接続情報を環境変数として渡す
+      // DB_HOST は RDS のエンドポイント、DB_PASSWORD は Secrets Manager から取得
+      environment: {
+        DB_NAME: 'reversi',
+        DB_USER: 'admin',
+      },
+      secrets: {
+        // Secrets Manager に保存された JSON から各フィールドを取り出して環境変数に注入
+        DB_HOST: ecs.Secret.fromSecretsManager(database.secret!, 'host'),
+        DB_PASSWORD: ecs.Secret.fromSecretsManager(database.secret!, 'password'),
+      },
+      logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'reversi' }),
+    });
+
+    // ----------------------------------------
+    // ECS サービス
+    // ----------------------------------------
+    // タスクを常に1台動かし続ける。落ちたら自動で再起動する
+    const service = new ecs.FargateService(this, 'ReversiService', {
+      cluster,
+      taskDefinition,
+      securityGroups: [ecsSg],
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      desiredCount: 1,
+    });
+
     this.vpc = vpc;
     this.albSg = albSg;
     this.ecsSg = ecsSg;
     this.rdsSg = rdsSg;
     this.database = database;
+    this.repository = repository;
+    this.service = service;
   }
 
   public readonly vpc: ec2.Vpc;
@@ -92,4 +173,6 @@ export class ReversiStack extends cdk.Stack {
   public readonly ecsSg: ec2.SecurityGroup;
   public readonly rdsSg: ec2.SecurityGroup;
   public readonly database: rds.DatabaseInstance;
+  public readonly repository: ecr.Repository;
+  public readonly service: ecs.FargateService;
 }
