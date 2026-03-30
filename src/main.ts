@@ -1,4 +1,5 @@
 import express from 'express'
+import type { Server } from 'http'
 import morgan from 'morgan'
 import 'express-async-errors'
 import { gameRouter } from './presentation/gameRouter'
@@ -6,7 +7,8 @@ import { turnRouter } from './presentation/turnRouter'
 import { DomainError } from './domain/error/domainError'
 import { ApplicationError } from './application/error/applicationError'
 
-const PORT = process.env.PORT || 3000
+const PORT = Number(process.env.PORT || 3000)
+const HOST = process.env.HOST || '127.0.0.1'
 
 const app = express()
 
@@ -19,9 +21,31 @@ app.use(turnRouter)
 
 app.use(errorHandler)
 
-app.listen(PORT, () => {
-  console.log(`Reversi application started: http://localhost:${PORT}`)
-})
+startServer(PORT)
+
+function startServer(port: number, maxTries = 5) {
+  let server: Server
+  server = app
+    .listen(port, HOST, () => {
+      console.log(`Reversi application started: http://${HOST}:${port}`)
+    })
+    .on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE' && maxTries > 0) {
+        const nextPort = port + 1
+        console.warn(
+          `Port ${port} is in use. Retrying with ${nextPort}...`
+        )
+        server.close(() => startServer(nextPort, maxTries - 1))
+        return
+      }
+      if (err.code === 'EPERM') {
+        console.error(`Permission denied to bind ${HOST}:${port}`)
+      } else {
+        console.error('Server failed to start', err)
+      }
+      process.exit(1)
+    })
+}
 
 function errorHandler(
   err: any,
