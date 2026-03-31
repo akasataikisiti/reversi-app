@@ -178,3 +178,162 @@ curl http://<ALBのDNS名>/health
 - [ ] `cdk deploy` を再実行して ECS を安定化
 - [ ] ECS Exec でコンテナに入り DB の DDL を実行
 - [ ] `curl /health` でヘルスチェックが通ることを確認
+
+---
+
+## destroy 後確認チェックリスト
+
+`cdk destroy` が正常終了しても、主要リソースが消えているかは確認した方が安全。
+特に `NAT Gateway`、`RDS`、`ALB` は課金や公開状態に直結する。
+
+### 1. CloudFormation スタックが消えているか
+
+```bash
+aws cloudformation describe-stacks \
+  --stack-name ReversiStack
+```
+
+期待する状態:
+
+- `Stack with id ReversiStack does not exist` が返る
+
+### 2. ALB が残っていないか
+
+```bash
+aws elbv2 describe-load-balancers \
+  --query 'LoadBalancers[*].[LoadBalancerName,DNSName,State.Code]' \
+  --output table
+```
+
+確認ポイント:
+
+- `Reversi` 系の ALB が残っていないこと
+
+### 3. ECS クラスター / サービス / タスクが残っていないか
+
+```bash
+aws ecs list-clusters --output table
+```
+
+```bash
+aws ecs list-services \
+  --cluster $(aws ecs list-clusters --query 'clusterArns[0]' --output text 2>/dev/null) \
+  2>/dev/null
+```
+
+```bash
+aws ecs list-tasks \
+  --cluster $(aws ecs list-clusters --query 'clusterArns[0]' --output text 2>/dev/null) \
+  2>/dev/null
+```
+
+確認ポイント:
+
+- `ReversiCluster` が残っていないこと
+- サービスやタスクが空であること
+
+### 4. RDS が残っていないか
+
+```bash
+aws rds describe-db-instances \
+  --query 'DBInstances[*].[DBInstanceIdentifier,DBInstanceStatus,Engine]' \
+  --output table
+```
+
+確認ポイント:
+
+- `reversi` 用の DB が残っていないこと
+
+### 5. NAT Gateway が残っていないか
+
+```bash
+aws ec2 describe-nat-gateways \
+  --filter Name=state,Values=available \
+  --query 'NatGateways[*].[NatGatewayId,VpcId,State]' \
+  --output table
+```
+
+確認ポイント:
+
+- 対象 VPC の `NAT Gateway` が残っていないこと
+
+### 6. VPC が残っていないか
+
+```bash
+aws ec2 describe-vpcs \
+  --query 'Vpcs[*].[VpcId,CidrBlock,IsDefault]' \
+  --output table
+```
+
+確認ポイント:
+
+- デフォルト VPC とは別に、今回の CDK で作った VPC が残っていないこと
+
+### 7. ECR リポジトリが残っていないか
+
+```bash
+aws ecr describe-repositories \
+  --query 'repositories[*].[repositoryName,repositoryUri]' \
+  --output table
+```
+
+確認ポイント:
+
+- `reversi-app` が残っていないこと
+
+注意:
+
+- ECR にイメージがあると destroy が失敗することがある
+
+### 8. Secrets Manager の Secret が残っていないか
+
+```bash
+aws secretsmanager list-secrets \
+  --query 'SecretList[*].[Name,ARN]' \
+  --output table
+```
+
+確認ポイント:
+
+- `ReversiDb` に関連する Secret が残っていないこと
+
+### 9. CloudWatch Logs のロググループが残っていないか
+
+```bash
+aws logs describe-log-groups \
+  --query 'logGroups[*].[logGroupName,storedBytes]' \
+  --output table
+```
+
+確認ポイント:
+
+- `reversi` に関連するロググループが残っていないこと
+
+注意:
+
+- ロググループは CDK の管理外で残ることがある
+
+### 10. お名前.com や ACM は別扱い
+
+次は `cdk destroy` では通常消えない、または別管理として考える。
+
+- お名前.com で取得したドメイン
+- お名前.com の DNS 設定
+- 手動発行した `ACM` 証明書
+- CDK Bootstrap リソース
+
+### destroy 後の最低限確認
+
+時間がないときは少なくとも次を確認する。
+
+- CloudFormation スタックが消えている
+- NAT Gateway が消えている
+- RDS が消えている
+- ALB が消えている
+- ECR リポジトリが消えている
+
+### まとめ
+
+- このプロジェクトは主要リソースは `cdk destroy` で消える想定
+- ただし `ECR` やログ周りは残ることがあるので確認した方が安全
+- `CloudWatch Logs`、ドメイン、手動作成の `ACM` は別管理と考える
