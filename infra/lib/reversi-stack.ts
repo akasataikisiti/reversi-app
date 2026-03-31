@@ -32,6 +32,7 @@ export class ReversiStack extends cdk.Stack {
         },
       ],
     });
+    cdk.Tags.of(vpc).add('Name', 'reversi-vpc');
 
     // ----------------------------------------
     // セキュリティグループ
@@ -43,6 +44,7 @@ export class ReversiStack extends cdk.Stack {
       description: 'Security group for ALB',
     });
     albSg.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'Allow HTTP from internet');
+    cdk.Tags.of(albSg).add('Name', 'reversi-alb-sg');
 
     // ECS 用: ALB からのトラフィックのみ許可
     const ecsSg = new ec2.SecurityGroup(this, 'EcsSg', {
@@ -50,6 +52,7 @@ export class ReversiStack extends cdk.Stack {
       description: 'Security group for ECS tasks',
     });
     ecsSg.addIngressRule(albSg, ec2.Port.tcp(3000), 'Allow traffic from ALB');
+    cdk.Tags.of(ecsSg).add('Name', 'reversi-ecs-sg');
 
     // RDS 用: ECS からの MySQL（3306番）のみ許可
     const rdsSg = new ec2.SecurityGroup(this, 'RdsSg', {
@@ -57,6 +60,7 @@ export class ReversiStack extends cdk.Stack {
       description: 'Security group for RDS',
     });
     rdsSg.addIngressRule(ecsSg, ec2.Port.tcp(3306), 'Allow MySQL from ECS');
+    cdk.Tags.of(rdsSg).add('Name', 'reversi-rds-sg');
 
     // ----------------------------------------
     // RDS（MySQL）
@@ -83,6 +87,7 @@ export class ReversiStack extends cdk.Stack {
       // 自動バックアップは無効（学習用途）
       backupRetention: cdk.Duration.days(0),
     });
+    cdk.Tags.of(database).add('Name', 'reversi-db');
 
     // ----------------------------------------
     // ECR（Dockerイメージの保存場所）
@@ -100,12 +105,14 @@ export class ReversiStack extends cdk.Stack {
         },
       ],
     });
+    cdk.Tags.of(repository).add('Name', 'reversi-ecr');
 
     // ----------------------------------------
     // ECS クラスター
     // ----------------------------------------
     // Fargate タスクを動かす「箱」。クラスター自体はリソースを消費しない
     const cluster = new ecs.Cluster(this, 'ReversiCluster', { vpc });
+    cdk.Tags.of(cluster).add('Name', 'reversi-cluster');
 
     // ----------------------------------------
     // ECS タスク定義
@@ -121,6 +128,7 @@ export class ReversiStack extends cdk.Stack {
         iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy'),
       ],
     });
+    cdk.Tags.of(taskExecutionRole).add('Name', 'reversi-task-execution-role');
     // Secrets Manager からシークレットを読み取る権限を追加
     database.secret?.grantRead(taskExecutionRole);
 
@@ -129,6 +137,7 @@ export class ReversiStack extends cdk.Stack {
       memoryLimitMiB: 512,
       executionRole: taskExecutionRole,
     });
+    cdk.Tags.of(taskDefinition).add('Name', 'reversi-task-def');
 
     // タスク定義にコンテナを追加
     taskDefinition.addContainer('ReversiContainer', {
@@ -161,6 +170,7 @@ export class ReversiStack extends cdk.Stack {
       // ECS Exec を有効化：コンテナ内でコマンドを実行できる（DB初期化などに使用）
       enableExecuteCommand: true,
     });
+    cdk.Tags.of(service).add('Name', 'reversi-service');
 
     // ----------------------------------------
     // ALB（Application Load Balancer）
@@ -172,6 +182,7 @@ export class ReversiStack extends cdk.Stack {
       securityGroup: albSg,
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
     });
+    cdk.Tags.of(alb).add('Name', 'reversi-alb');
 
     // リスナー：ALBがポート80でリクエストを受け付ける
     const listener = alb.addListener('HttpListener', {
@@ -181,7 +192,7 @@ export class ReversiStack extends cdk.Stack {
 
     // ターゲットグループ：ALBのリクエストを転送する先（ECSサービス）を登録
     // ヘルスチェック：/health に GET して 200 が返れば正常と判断
-    listener.addTargets('ReversiTarget', {
+    const targetGroup = listener.addTargets('ReversiTarget', {
       port: 3000,
       protocol: elbv2.ApplicationProtocol.HTTP,
       targets: [service],
@@ -191,6 +202,7 @@ export class ReversiStack extends cdk.Stack {
         healthyHttpCodes: '200',
       },
     });
+    cdk.Tags.of(targetGroup).add('Name', 'reversi-tg');
 
     // ALBのURLをCloudFormationのOutputsとして出力する
     // cdk deploy 後にターミナルに表示され、アプリのURLとして使える
